@@ -1,6 +1,7 @@
 import os
 import time
 import shutil
+import streamlit as st
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium import webdriver
@@ -43,8 +44,9 @@ def initize_browser():
     return driver
 
 
-''' Functions download All MF meta details and individual URI of each MF in CSV '''
 def download_mf_meta_csv():
+    ''' Functions download All MF meta details and individual URI of each MF in CSV '''
+
     driver = initize_browser()
     driver.get(constant.url_mf_direct)
 
@@ -129,16 +131,71 @@ def download_portfolios():
     print(df_mf_all)
 
 def analyze_portfolios():
+    st.title('Mutual Fund houses portfolio analysis')
     log.info('Analyzing portfolios')
     df_mf_all = pd.read_csv(constant.mf_all_filepath)
+    df_mf_meta = pd.read_csv(mf_meta_filepath_local)
 
+    fundhouses = df_mf_all['fundname'].unique().tolist()
+    
+    stratery = st.radio('Select stratery for fund house selection',
+                        ['AUM', 'Returns', 'ALL', 'Custom'],
+                        captions = ["Asset Under Management", "Returns past 3 years", 
+                                    "All Availaible funds", "I will choose"],
+                        horizontal=True)
+
+    fundhouses_opted = []
+
+    if stratery == 'AUM':
+        fundhouses_opted = df_mf_meta.sort_values(by=['AUM'], ascending=False)['Fund Name'].tolist()[0:3]
+    elif stratery == 'Returns':
+        fundhouses_opted = df_mf_meta.sort_values(by=['Returns 3Yr'], ascending=False)['Fund Name'].tolist()[0:3]
+    elif stratery == 'ALL':
+        fundhouses_opted = fundhouses
+    elif stratery == 'Custom':
+        fundhouses_opted = st.multiselect('select fundhouses', fundhouses)
+    st.write("Fund houses selected: ", fundhouses_opted)
+
+    # df_mf_all['Market Value Latest Price'] = df_mf_all['Market Value Latest Price'].fillna(0).apply(lambda x: int(x))
     # df_mf_all.sort_values(by=['Quantity'])
-    print(df_mf_all[['fundname', 'Invested In', 'Quantity', '% of Total Holding']])
 
+    for column in df_mf_all.columns.tolist():
+        try:
+            if column == 'Month Change <br> in Shares %':
+                df_mf_all[column] = df_mf_all[column].apply(lambda x: str(x).lower().replace('new', '0'))
+            df_mf_all[column] = df_mf_all[column].astype(float)
+            df_mf_all[column] = df_mf_all[column].fillna(0)
+
+        except Exception as err:
+            pass
     # shares having highest holding in funds
-    # shares with largest quantity occupied
-    # shares with largest moving changes +ve
-     
+    st.header('Shares having highest total holding in funds', divider='rainbow')
+
+    df_mf_all_ = df_mf_all[df_mf_all['fundname'].isin(fundhouses_opted)]
+    df_mf_all_['number_of_funds_opted'] = 1
+
+    df_mf_all_ = df_mf_all_.groupby(['Invested In']).sum().reset_index()
+    df_mf_all_ = df_mf_all_.sort_values(by=['Market Value Latest Price'], ascending=False).reset_index().head(3)
+    df_mf_all_ = df_mf_all_[['Invested In', 'Sector', 'Market Value Latest Price', 
+                             'number_of_funds_opted',
+                             '% of Total Holding', 'Month Change <br> in Shares', 
+                             'Month Change <br> in Shares %']]
+
+    st.write(df_mf_all_)
+
+    # shares with largest percentage occupied
+    st.header('Shares having highest avg percentage holding', divider='rainbow')
+
+    df_mf_all_ = df_mf_all[df_mf_all['fundname'].isin(fundhouses_opted)]
+
+    df_mf_all_ = df_mf_all_[['Invested In', 'Sector', 'Market Value Latest Price', '% of Total Holding', 'Month Change <br> in Shares', 
+                             'Month Change <br> in Shares %']]
+    df_mf_all_ = df_mf_all_.groupby(['Invested In', 'Sector']).mean().reset_index()
+    df_mf_all_ = df_mf_all_.sort_values(by=['% of Total Holding'], ascending=False).reset_index().head(3)
+
+    st.write(df_mf_all_)
+
+    # shares with largest moving changes +ve 
 
 if __name__ == "__main__":
 
@@ -146,5 +203,5 @@ if __name__ == "__main__":
         log.info(f"creating dir - {folder_current_date}")
         os.makedirs(folder_current_date)
 
-    download_portfolios()
+    #download_portfolios()
     analyze_portfolios()
