@@ -2,11 +2,15 @@ import os
 from pathlib import Path
 home = str(Path.home())
 
+# mode
+download_mode = False
 
 # Filesystem 
 data_dir = "data"
-mf_details_filepath = os.path.join(home, 'Downloads', 'Small_Cap.csv')
+download_filepath = os.path.join(home, 'Downloads')
+mf_meta_filepath = os.path.join(download_filepath, 'Small_Cap.csv')
 mf_href_filepath = os.path.join('data', 'filepath_mf_href.csv')
+mf_all_filepath = os.path.join('data', 'mf_all.csv')
 driver_gecko_filepath = 'geckodriver'
 
 # URIs

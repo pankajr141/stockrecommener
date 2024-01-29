@@ -11,16 +11,21 @@ from lib import logger
 log = logger.get_logger()
 
 import constant
-mf_details_filepath = constant.mf_details_filepath
+mf_meta_filepath = constant.mf_meta_filepath
 mf_href_filepath = constant.mf_href_filepath
 
 from datetime import datetime
 current_date = datetime.now().strftime('%Y%m')
 folder_current_date = os.path.join(constant.data_dir, current_date)
 
-mf_details_filepath_local = os.path.join(folder_current_date, os.path.basename(mf_details_filepath))
+mf_meta_filepath_local = os.path.join(folder_current_date, os.path.basename(mf_meta_filepath))
+
+def get_filename_from_fundname(fund_name):
+    return fund_name.replace(' ', '_') + ".csv"
 
 def initize_browser():
+    if not constant.download_mode:
+        raise Exception("Download mode disabled")
 
     # Setting firefox options
     options = webdriver.FirefoxOptions()
@@ -47,12 +52,12 @@ def download_mf_meta_csv():
     time.sleep(2)
     
     driver.find_element(by=By.XPATH, value=constant.xpath_mf_meta_direct_csv).click()
-    if not os.path.exists(mf_details_filepath):
+    if not os.path.exists(mf_meta_filepath):
         driver.quit()
-        raise Exception(f"unable to download {mf_details_filepath}")
+        raise Exception(f"unable to download {mf_meta_filepath}")
 
     # Copy downloaded file from Downloads folder to data directory
-    shutil.copyfile(mf_details_filepath, mf_details_filepath_local)
+    shutil.copyfile(mf_meta_filepath, mf_meta_filepath_local)
 
     # Fetch URI details of individual MF and save them in a csv
     log.info("Fetching uri details of individual mutual funds ..")
@@ -68,7 +73,7 @@ def download_mf_meta_csv():
 
     driver.quit()
 
-def download_mf_csv(fund_uri):
+def download_mf_csv(fund_uri, fund_name, fund_filename):
     driver = initize_browser()
     driver.get(fund_uri)
 
@@ -76,30 +81,64 @@ def download_mf_csv(fund_uri):
     time.sleep(2)
 
     driver.find_element(by=By.XPATH, value=constant.xpath_mf_csv).click()
-    # if not os.path.exists(mf_details_filepath):
-    #     driver.quit()
-    #     raise Exception(f"unable to download {mf_details_filepath}")
+    mf_filepath = os.path.join(constant.download_filepath, fund_filename)
+
+    if not os.path.exists(mf_filepath):
+        driver.quit()
+        raise Exception(f"unable to download {mf_filepath}")
+
+    mf_filepath_local = os.path.join(folder_current_date, fund_filename)
+    shutil.copyfile(mf_filepath, mf_filepath_local)
+
     driver.quit()
 
-def process():
-    if not os.path.exists(mf_details_filepath_local) or not os.path.exists(mf_href_filepath):
-       log.info(f"MF Details file ({mf_details_filepath_local}) doesn't exist, hence downloading") 
+def download_portfolios():
+    if not os.path.exists(mf_meta_filepath_local) or not os.path.exists(mf_href_filepath):
+       log.info(f"MF Meta file ({mf_meta_filepath_local}) doesn't exist, hence downloading") 
        download_mf_meta_csv()
 
-    log.info(f"processing MF Details file ({mf_details_filepath_local})")
+    log.info(f"processing MF Details file ({mf_meta_filepath_local})")
 
     # Below block process meta information and chunk all related details
-    df_mfdirect = pd.read_csv(mf_details_filepath_local)
+    df_mf_meta = pd.read_csv(mf_meta_filepath_local)
 
     # Processing Individual MF
+    mf_all = []
     for _, row in pd.read_csv(mf_href_filepath).iterrows():
-        fund_name = row['mfname']
-        fund_uri = row['href']
+        try:
+            fund_name = row['mfname']
+            fund_uri = row['href']
 
-        log.info(f"processing fund {fund_name} - {fund_uri}")
-        download_mf_csv(fund_uri)
+            log.info(f"processing fund {fund_name} - {fund_uri}")
+            fund_filename = get_filename_from_fundname(fund_name)
+            mf_filepath_local = os.path.join(folder_current_date, fund_filename)
 
-        # break
+            if not os.path.exists(mf_filepath_local):
+                log.info(f"MF file ({mf_filepath_local}) doesn't exist, hence downloading")
+                download_mf_csv(fund_uri, fund_name, fund_filename)
+
+            df_mf = pd.read_csv(mf_filepath_local)
+            df_mf['fundname'] = fund_name
+            mf_all.append(df_mf)
+        except Exception as err:
+            log.error(err)
+
+    df_mf_all = pd.concat(mf_all, axis=0)
+    df_mf_all.to_csv(constant.mf_all_filepath, index=False)
+    
+    print(df_mf_all)
+
+def analyze_portfolios():
+    log.info('Analyzing portfolios')
+    df_mf_all = pd.read_csv(constant.mf_all_filepath)
+
+    # df_mf_all.sort_values(by=['Quantity'])
+    print(df_mf_all[['fundname', 'Invested In', 'Quantity', '% of Total Holding']])
+
+    # shares having highest holding in funds
+    # shares with largest quantity occupied
+    # shares with largest moving changes +ve
+     
 
 if __name__ == "__main__":
 
@@ -107,4 +146,5 @@ if __name__ == "__main__":
         log.info(f"creating dir - {folder_current_date}")
         os.makedirs(folder_current_date)
 
-    process()
+    download_portfolios()
+    analyze_portfolios()
