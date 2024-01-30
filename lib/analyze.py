@@ -59,9 +59,12 @@ def get_top_k_stock_by_investment(info, fundhouses, k=3):
     df = df.groupby(['Invested In']).agg({'Sector': lambda x: x.iloc[0], 
                                           'Market Value Latest Price': 'sum', 
                                           'number_of_funds_opted': 'count', 
-                                          '% of Total Holding': lambda x: x.mean(skipna=False), 
-                                          'Month Change <br> in Shares': lambda x: x.mean(skipna=False), 
-                                          'Month Change <br> in Shares %': lambda x: x.mean(skipna=False)})
+                                          '% of Total Holding': 'sum', 
+                                          'Month Change <br> in Shares': 'sum', 
+                                          'Month Change <br> in Shares %': 'sum'})
+
+    for col in ['% of Total Holding', 'Month Change <br> in Shares %']:
+        df[col] = df[col] / len(fundhouses)
     df = df.sort_values(by=['Market Value Latest Price'], ascending=False).reset_index().head(k)
     return df
 
@@ -74,8 +77,10 @@ def get_top_k_stock_by_avg_holding(info, fundhouses, k=3):
     df = df.groupby(['Invested In']).agg({'Sector': lambda x: x.iloc[0], 
                                           'Market Value Latest Price': 'sum', 
                                           'number_of_funds_opted': 'count', 
-                                          '% of Total Holding': 'mean', 
-                                          'Month Change <br> in Shares': 'mean', 
-                                          'Month Change <br> in Shares %': 'mean'})
+                                          '% of Total Holding': 'sum', 
+                                          'Month Change <br> in Shares': 'sum', 
+                                          'Month Change <br> in Shares %': 'sum'})
+    for col in ['% of Total Holding', 'Month Change <br> in Shares %']:
+        df[col] = df[col] / len(fundhouses)
     df = df.sort_values(by=['% of Total Holding'], ascending=False).reset_index().head(k)
     return df
