@@ -1,16 +1,24 @@
 import os
 from pathlib import Path
+from datetime import datetime
+
 home = str(Path.home())
 
 # mode
-download_mode = False
+download_mode = True
+
 
 # Filesystem 
 data_dir = "data"
 download_filepath = os.path.join(home, 'Downloads')
+folder_current_date = os.path.join(data_dir, datetime.now().strftime('%Y%m'))
+
 mf_meta_filepath = os.path.join(download_filepath, 'Small_Cap.csv')
 mf_href_filepath = os.path.join('data', 'filepath_mf_href.csv')
 mf_all_filepath = os.path.join('data', 'mf_all.csv')
+mf_meta_filepath_local = os.path.join(folder_current_date, os.path.basename(mf_meta_filepath))
+mf_all_filepath_local = os.path.join(data_dir, os.path.basename(mf_all_filepath))
+
 driver_gecko_filepath = 'geckodriver'
 
 # URIs
