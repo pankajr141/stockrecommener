@@ -32,11 +32,12 @@ def display():
     if stratery == 'AUM':
         fundhouses_opted = analyze.get_top_k_fund_by_aum(info, k)
     elif stratery == 'Returns':
-        fundhouses_opted = analyze.get_top_k_fund_by_returns(info, k)
+        fundhouses_opted = analyze.get_top_k_fund_by_returns(info, year=3, k=k)
     elif stratery == 'ALL':
         fundhouses_opted = fundhouses
     elif stratery == 'Custom':
         fundhouses_opted = st.multiselect('select fundhouses', fundhouses)
+
     st.write("Fund houses selected: ", fundhouses_opted)
 
     info['df_mf_all'] = analyze.clean_df(info['df_mf_all'])
