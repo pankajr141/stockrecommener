@@ -1,1 +1,5 @@
 __pycache__
+*.deb*
+*.out
+*.json
+node_modules
