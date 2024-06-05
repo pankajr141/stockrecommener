@@ -28,7 +28,9 @@ def download_etf_data():
 def download_etf_yearly_data(etf, year, etf_download_path):
     log.info(f"Downloading {etf} : {year} -> {etf_download_path} ...")
 
-
-    df = yf.download("^NSEI", start=f"{year}-01-01", end=f"{year}-12-31")
+    df = yf.download("^NSEI", start=f"{year}-01-01", end=f"{year}-12-31").reset_index()
     if df.shape[0]:
         df.to_csv(etf_download_path, index=False)
+
+if __name__ == "__main__":
+    download_etf_data()

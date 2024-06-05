@@ -7,4 +7,4 @@ from lib.etf import visualize
 if __name__ == "__main__":
 
     downloader.download_etf_data()
-    # visualize.display()
+    visualize.display()

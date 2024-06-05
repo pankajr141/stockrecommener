@@ -11,7 +11,7 @@
 <pre>
   cd stockrecommener
   streamlit run main.py &> logs.txt &
-  nohup localtunnel --port 8501
+  nohup npx localtunnel --port 8501 &
 
   tail nohup.out   -- Get URI and open that in browser
   tail logs.txt    -- Get IP as password
